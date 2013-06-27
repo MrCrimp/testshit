@@ -6,7 +6,10 @@
     <title>My app</title>
 
     <!-- this is all it takes. you are done -->
-    <script src="testshit.js"></script>    
+    <!--   data-test: root namespace to test, window.foo = data-test="foo" 
+           data-suffix: file suffix for tests. data-suffix=".spec" async loads "foo.spec.js"
+    -->
+    <script async data-test="" data-suffix="" src="testshit.js"></script>    
 
   </head>
  
@@ -17,7 +20,7 @@
       Press F12 to watch tests run in the background, in the JavaScript console.
     </div>
     
-    <!--<script src="your app scripts goes here as usual"></script>-->
+    <!--<script src="your app scripts goes here or in head as usual"></script>-->
 
   </body>
   
