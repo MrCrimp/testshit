@@ -1,14 +1,19 @@
-// Dirty concept of browser based continuous testing (shitty code I know.. it was originally just a quick test to see if closure scopes could be modified from the outside.)
+// Dirty POC of browser based continuous testing 
 // (C) 2013 Johan O
 // SWL - Standard Whatever Licence 
 
 // Best used with TINCR extension http://tin.cr/
+// <script async data-test="App" data-suffix=".spec" src="testshit.js"></script>
+
+// TODO: convert from hack to a scoped app, print timings, use CSS to format console
+
+if (!console.group) console.group = console.groupEnd = function(t){ console.log(t)};
 
 window.onerror = function(){
    codeRed();
 }
 
-Function.prototype.specsIn = window.specsIn = function (specName) {
+window.specsIn = function (specName) {
    // require a spec file for a module
    if (window.bucket[specName]) return;
    requireSpec(specName);
@@ -19,15 +24,16 @@ function requireSpec(contextName, alreadyExistsFunc) {
    var s = document.createElement("script");
    s.type = "text/javascript";
    s.async = true;
-   s.src = 'specs/' + contextName + '.js?t=' + new Date().getTime();
+   s.setAttribute("data-spec", contextName);
+   s.src = 'specs/' + contextName + (Testshit.SpecSuffix || '.spec') + '.js?t=' + new Date().getTime();
    (document.body || document.head).appendChild(s);
    s.onload = Testshit.digest;
    return s;
 }
 
 function removeShortcutIcons() {
-   linkTags = document.getElementsByTagName('link');
-   for(i = linkTags.length-1; i >= 0; i--) {
+   var linkTags = document.getElementsByTagName('link');
+   for(var i = linkTags.length-1; i >= 0; i--) {
       var linkTag = linkTags[i];
       if(linkTag.getAttribute('rel') == 'test icon') {
          linkTag.parentNode.removeChild(linkTag);
@@ -41,7 +47,7 @@ function setShortcutIcon() {
    var linkTag = document.createElement('LINK');
    linkTag.setAttribute('rel', 'test icon');
    linkTag.setAttribute('type', 'image/x-icon');
-   linkTag.setAttribute('href', 'http://cdn.dustball.com/' + (window.bucket.allPassed ? 'accept' : 'exclamation') + '.png');
+   linkTag.setAttribute('href', 'http://cdn.dustball.com/' + (window.bucket.allPassed && !window.error ? 'accept' : 'exclamation') + '.png');
    head.appendChild(linkTag);
 }
 
@@ -65,10 +71,10 @@ function getStack(err, i){
    return stack[1].indexOf('Error') > -1 ? stack[4] : stack[1];
 }
 
-!function () {
-   'use strict';
+!function () { 'use strict';
 
    var digest,
+      knownshit = [],
       runSpec,
       scope = window,
       scenarioFailed = false,
@@ -117,8 +123,6 @@ function getStack(err, i){
          }
       }
       codeRed();
-      //if (dontThrow) debugger;
-      //else 
       throwIt();
    };
 
@@ -177,13 +181,29 @@ function getStack(err, i){
       }
    }
 
+   function isFuncNative(c) {
+      return !scope.Testshit.AppRoot && !c.startsWith('webkit') && (  typeof scope[c] !== "function" || scope[c].toString().indexOf('[native code]') > -1 )
+   }
+
+   function tryLoadAll() {
+      for( var c in scope.Testshit.AppRoot || scope ){
+         if ( !isFuncNative(c) ){
+             specsIn(c);
+         }
+      }
+   }
+
+   setTimeout(tryLoadAll,1500);
+
    digest.bind(this);
 
    scope.setInterval(digest, 1000 * INTERVAL_SECS);
 
-   console.group('Testshit running');
+   var config = { test:   document.querySelectorAll("script[data-test]"),
+                  suffix: document.querySelectorAll("script[data-suffix]")};
+
+   if(config.test.length)  scope.Testshit.AppRoot = scope[ config.test[0].getAttribute("data-test") ];
+
+   if(config.suffix.length)  scope.Testshit.SpecSuffix = config.suffix[0].getAttribute("data-suffix");
 
 }();
-
-// dog food
-specsIn('specShit');
